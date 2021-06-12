@@ -1,19 +1,133 @@
-plugins {
-    id 'java'
+ext {
+    commonsCollectionVersion = '3.2.2'
+    commonsCodecVersion = '1.10'
+    commonsLangVersion = '3.4'
+    guavaVersion = '19.0'
+    jacksonVersion = '2.9.9'
+    jacksonDatabindVersion = '2.9.9.2'
+    validationApiVersion = '1.1.0.Final'
+    collections4Version = '4.4'
+    fastjsonVersion = '1.2.76'
+    log4jVersion = '2.14.1'
 }
 
-group 'me.lingfengsan'
-version '1.0-SNAPSHOT'
+buildscript {
+    repositories {
+        maven { url "http://maven.aliyun.com/nexus/content/groups/public/" }
+    }
 
-repositories {
-    mavenCentral()
 }
 
-dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+
+allprojects {
+    apply plugin: 'base'
+    apply plugin: 'maven-publish'
+    apply plugin: 'java'
+    apply plugin: 'checkstyle'
+
+    group 'me.lingfengsan'
+    version '0.0.3'
+
+    sourceCompatibility = 1.16
+    targetCompatibility = 1.16
+
+    repositories {
+        maven { url "http://maven.aliyun.com/nexus/content/groups/public/" }
+    }
+
+    configurations {
+        all*.exclude group: "org.slf4j", module: "slf4j-log4j12"
+    }
+
+    configurations.all {
+        // check for updates every build
+        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    }
+
+    task sourceJar(type: Jar) {
+        from sourceSets.main.allJava
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+                artifact sourceJar {
+                    classifier "sources"
+                }
+            }
+        }
+    }
+
+    sourceSets {
+        main {
+            resources {
+                srcDirs = ["src/main/resources"]
+            }
+        }
+        test {
+            resources {
+                srcDirs = ["src/test/resources"]
+            }
+        }
+    }
+
+    tasks.withType(JavaCompile) {
+        options.encoding = "UTF-8"
+    }
+
+    checkstyle {
+        toolVersion = "7.6"
+        configFile file("${project.rootDir}/checkstyle/java-checkstyle.xml")
+    }
+
+
+    tasks.withType(Checkstyle).each {
+        checkstyleTask ->
+            checkstyleTask.doLast {
+                reports.all {
+                    report ->
+                        def outputFile = report.destination
+                        if (outputFile.exists() && outputFile.text.contains("<error ")) {
+                            throw new GradleException("There were checkstyle warnings! For more info check $outputFile")
+                        }
+                }
+            }
+    }
+
 }
 
-test {
-    useJUnitPlatform()
+subprojects {
+    dependencies {
+        compile "org.apache.commons:commons-collections4:$collections4Version"
+        compile "commons-collections:commons-collections:$commonsCollectionVersion"
+        compile "commons-codec:commons-codec:$commonsCodecVersion"
+        compile "org.apache.commons:commons-lang3:$commonsLangVersion"
+        compile "com.google.guava:guava:$guavaVersion"
+        compile "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
+        compile "com.fasterxml.jackson.core:jackson-databind:$jacksonDatabindVersion"
+        compile "com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion"
+        compile "com.fasterxml.jackson.module:jackson-module-afterburner:$jacksonVersion"
+        compile "com.alibaba:fastjson:$fastjsonVersion"
+        compile "org.apache.logging.log4j:log4j-core:$log4jVersion"
+        compile "org.apache.logging.log4j:log4j-api:$log4jVersion"
+        compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4jVersion"
+    }
+}
+
+project(":chia-plot-manager-gui") {
+    dependencies {
+        compile project(":chia-plot-manager-core")
+    }
+}
+
+project(":chia-plot-manager-core") {
+    dependencies {
+        compile project(":chia-plot-manager-common")
+    }
+}
+
+project(":chia-plot-manager-common") {
+    dependencies {
+    }
 }

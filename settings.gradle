@@ -1,2 +1,4 @@
 rootProject.name = 'chia-plot-manager'
-
+include 'chia-plot-manager-gui'
+include 'chia-plot-manager-core'
+include 'chia-plot-manager-common'
